@@ -7,7 +7,7 @@ const db = new Sequelize(process.env.DB_DATABASE,process.env.DB_USERNAME,process
  {                      //database name   =>  username    =>    password//
     host:process.env.DB_HOST,
     dialect: 'postgres',//name of the engine
-
+    port: 5432,
     pool: {  //collection of saved reusable connections
         max: 5, //never have more than 5 open connections
         min: 0, // t a minimum, have zero open connections/maintain no minimum number of connections
