@@ -30,7 +30,7 @@ const Meme = db.define('Meme', {//use db to create your table=> User is the tabl
 
 
 
-db.sync({drop:true})
+Meme.sync({alter:true})
 .then((data)=>{
     console.log('synced')})
 .catch((err)=>{console.log('error syncing',err)})
