@@ -14,6 +14,8 @@ let {IgApiClient} = require('instagram-private-api');
 var path = require('path');
 var Jimp = require('jimp');
 
+require('dotenv').config();
+
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
