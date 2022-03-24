@@ -4,15 +4,17 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var fs=require('fs')
-var get=require('request-promise')
 const puppeteer = require('puppeteer');
 const Meme=require('./model/user')
 var CronJob = require('cron').CronJob;
 const download = require('image-downloader')
 var downloadAPI = require('download-url');
-let {IgApiClient} = require('instagram-private-api');
 var path = require('path');
 var Jimp = require('jimp');
+const { Op } = require("sequelize");
+let {IgApiClient} = require('instagram-private-api');
+const Downloader = require('node-url-downloader');
+
 
 require('dotenv').config();
 
@@ -35,60 +37,64 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-
+ //keeps track of the meme id from the database
 var index=0;
 
-(async()=>{
+ (async()=>{
   const ig=new IgApiClient();
   ig.state.generateDevice("memester_morningstar");
   const auth = await ig.account.login("memester_morningstar", "memestermorningstar###123");
 //________________________________________________________________________________________
-//use job scheduler for hour to fetch url by Id, after fetching the url post on instagram
+//use job scheduler for one hour to fetch url by Id
  var job = new CronJob('* 1 * * * *',async function() {
-
-  //increment index
+console.log('min has passed')
+  //increment from 1 onwards (post_id)
   index++;
 
-  //find a meme to post
+  //find a meme to post from database where id=index
   let meme=await Meme.findOne({where:{
     id:index
   }});
-
+  //if meme exists
   if(meme){
     memeData=meme.toJSON();
     let test=memeData;
-  
+
     let image=null;
     test.url.toString().split('.gif').length==1?image=true:image=null;
   
      if(image){
+       //its an image
 
-    const options = {
-      url: memeData.url,
-      dest: '../../memes/meme.jpg' 
-    }
+      const options = {
+        url: memeData.url, //url of the meme (image)
+        dest: '../../memes/meme.jpg'  //location to save
+        }
+
+    //download is a package
     download.image(options)
       .then(async({ filename }) => { 
-        // open a file called "lenna.png"
-Jimp.read(path.resolve(__dirname,'./memes/meme.jpg'), (err, lenna) => {
-  if (err){console.log(err)};
- if(lenna){
-  lenna
-  .resize(400, 400) // resize
-  .quality(100) // set JPEG quality
-  .write(path.resolve(__dirname,'./memes/meme-resize.jpg')); // save
- }
-});
+        // open a file called "meme.jpg"
+        Jimp.read(path.resolve(__dirname,'./memes/meme.jpg'), (err, lenna) => {
+            if (err){console.log(err)};
+            if(lenna){
+              lenna
+              .resize(400, 400) // resize
+              .quality(100) // set JPEG quality
+              .write(path.resolve(__dirname,'./memes/meme-resize.jpg')); // meme thats been resized
+            }
+          });
       fs.readFile(path.resolve(__dirname,'./memes/meme-resize.jpg'),async(err,data)=>{
+        //data is in buffer format
         if(err){
           return
         }
         else{
           const publishResult = await ig.publish.photo({
             file: data, // image buffer, you also can specify image from your disk using fs
-            caption: 'Just another meme stolen from redit ")', // nice caption (optional)
+            caption: 'Just another meme of the hour")', // nice caption (optional)
           });
-          console.log(publishResult)
+          
         }
       })
 
@@ -97,39 +103,37 @@ Jimp.read(path.resolve(__dirname,'./memes/meme.jpg'), (err, lenna) => {
       image=null;
     }
     else{
-      console.log('its a gif');
+      console.log('its a gif>>>>');
+      
       var _d = new downloadAPI(memeData.url)
+      console.log(_d,'d')
   _d.setPath('./memes').start('abc.mp4').then(async function(result){
-    console.log('result: ', result);
-    var my_day=new Date()
-    var day_name=new Array(7);
-    day_name[0]='Sunday'
-    day_name[1]=' Monday'
-    day_name[2]='Tuesday'
-    day_name[3]='Wednesday'
-    day_name[4]='Thursday'
-    day_name[5]='Friday'
-    day_name[6]='Saturday'
-    
-    let day=day_name[my_day.getDay()]
-    
-    let tags=[day,'memes']
-    console.log(tags)
-   const publishResult = await ig.publish.photo({
-    file: (__dirname+'/memes/abc.mp4'), // image buffer, you also can specify image from your disk using fs
-    caption: 'Really nice photo from the internet! 💖', // nice caption (optional)
-  })
+    console.log(result,'result')
+    fs.readFile(path.resolve(__dirname,'./memes/abc.mp4'),async(err,data)=>{
+      //data is buffer 
+      console.log('type',typeof data,data.ArrayBuffer)
+      try{
+        const publishResult = await ig.publish.video({
+          video: data.ArrayBuffer,
+          caption: 'gif of the hour!',
+        });
+        console.log(publishResult,'gifs')
+
+      }catch(err){
+        console.log(err,'failed to publish gifs')
+      }
+    })
+
+
   },function(error){
     console.log(error)
   }) 
     } 
   }
 }, null, true, 'America/Los_Angeles');
-var jobDeleteAndScrape=new CronJob("30 20 * * * *",function(){
+var jobDeleteAndScrape=new CronJob("30 20 * * *",function(){
   index=0;
-  Meme.destroy({where:{id:{
-    [Op.lt]:100
-  }}});
+  Meme.destroy({ truncate: true, restartIdentity: true })
 
  (async () => {
   const browser = await puppeteer.launch();
@@ -192,10 +196,8 @@ job.start();
 jobDeleteAndScrape.start();
 
 
-})()
-
-
-
+})() 
+  
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
