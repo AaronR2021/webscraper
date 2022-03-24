@@ -38,10 +38,8 @@ var index=0;
 
 (async()=>{
   const ig=new IgApiClient();
-  ig.state.generateDevice(process.env.IG_USERNAME);
-  const auth = await ig.account.login(process.env.IG_USERNAME, process.env.IG_PASSWORD);
-  console.log(JSON.stringify(auth),'auth info>!!!!!!!!!!');
-
+  ig.state.generateDevice("memester_morningstar");
+  const auth = await ig.account.login("memester_morningstar", "memestermorningstar###123");
 //________________________________________________________________________________________
 //use job scheduler for hour to fetch url by Id, after fetching the url post on instagram
  var job = new CronJob('* 1 * * * *',async function() {
