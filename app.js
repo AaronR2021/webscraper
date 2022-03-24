@@ -14,6 +14,8 @@ let {IgApiClient} = require('instagram-private-api');
 var path = require('path');
 var Jimp = require('jimp');
 
+require('dotenv').config();
+
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
@@ -22,7 +24,7 @@ var usersRouter = require('./routes/users');
 const db=require('./config/database');
 db.authenticate().then(()=>{
   console.log('connected to database')
-})
+}).catch((err)=>console.error('error connecting to database',err))
 
 
 var app = express();
