@@ -24,7 +24,7 @@ var usersRouter = require('./routes/users');
 const db=require('./config/database');
 db.authenticate().then(()=>{
   console.log('connected to database')
-})
+}).catch((err)=>console.error('error connecting to database',err))
 
 
 var app = express();
